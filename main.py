@@ -6,43 +6,50 @@ import os
 
 #Генерация ключей два ключа публичный(для шифрования) и приватный(для расшифровки)
 def generate_keys():
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    public_key = private_key.public_key()
+    try:
+        private_key = rsa.generate_private_key(
+            public_exponent=65537, # стандартные числа для безопасности
+            key_size=2048 # размер стандартный для скорости
+        )
+        public_key = private_key.public_key() # генерирует уже
 
-    with open("private_key.pem", "wb") as f:
-        f.write(private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()
-        ))
+        # Save private key
+        with open("private_key.pem", "wb") as f:
+            f.write(private_key.private_bytes( # сохораняет в байт чтобы потом норм сохранить
+                encoding=serialization.Encoding.PEM, # в pem файле сохнраиться обчно ключи именно в таком формате хранятся
+                format=serialization.PrivateFormat.TraditionalOpenSSL, # в традиционном формате сохраняется есть новее но не везде использовать можно                encryption_algorithm=serialization.NoEncryption()
+            ))
 
-    with open("public_key.pem", "wb") as f:
-        f.write(public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ))
+        # Save public key
+        with open("public_key.pem", "wb") as f:
+            f.write(public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo #тоже стандарт использует
+            ))
 
-    print("🔑 Ключи сгенерированы и сохранены.")
+        print("✅ Ключи успешно сгенерированы и сохранены в файлы .pem")
+    except Exception as e:
+        print(f"❌ Ошибка при генерации ключей: {e}")
 
 #Шифрование шифрует введеный текст с использованием публичного ключа выводит и сохраняет в файле
 def encrypt_message(message):
     try:
-        with open("public_key.pem", "rb") as f:
+        with open("public_key.pem", "rb") as f: # открывает тот pem файл
             public_key = serialization.load_pem_public_key(f.read())
 
         encrypted = public_key.encrypt(
             message.encode(),
             padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
+                mgf=padding.MGF1(algorithm=hashes.SHA256()), # паддинг добавляет случайность  MGF1 делает маску для большей безопасности
+                algorithm=hashes.SHA256(), # хэширует для целостности данных и для защиты
                 label=None
             )
         )
 
-        encoded = base64.b64encode(encrypted).decode()
+        encoded = base64.b64encode(encrypted).decode() # расшифровывает и выводит уже в нормальном виде сообщение
         print("🔒 Зашифрованное сообщение:\n" + encoded)
 
-        with open("encrypted_message.txt", "w") as f:
+        with open("encrypted_message.txt", "w") as f: # открывает файл в режиме WWWW если файла нет он создаст если есть то перезапишет блок with гарантирует закрывание файла
             f.write(encoded)
 
     except Exception as e:
